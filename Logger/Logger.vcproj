@@ -175,7 +175,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\src\main.cpp"
+				RelativePath=".\src\sample.cpp"
 				>
 			</File>
 		</Filter>
