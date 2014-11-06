@@ -3,7 +3,10 @@
 Logger::Logger(const char *fileName) {
 	// ファイル名が空の時
 	if(fileName == NULL) {
-		fileName = "default.log";
+		strcpy(mFileName, "default");
+	}
+	else {
+		strcpy(mFileName, fileName);
 	}
 
 	// ディレクトリ名の設定１
@@ -25,20 +28,22 @@ Logger::Logger(const char *fileName) {
 	// ディレクトリが存在しているかチェックする
 	checkExistDir(dirName, sizeof(dirName));
 
-	// パスの設定
+	// パスの設定(拡張子とファイルナンバーを除く)
 	char path[128];
 	strcpy(path, dirName);
-	strcat(path, fileName);
+	strcat(path, mFileName);
+
+	// ファイルの数をカウントする
+	int fileNum = lastFileNum(path, sizeof(path));
+	char fileNumStr[4];
+	sprintf(fileNumStr, "%03d", fileNum);
+
+	// パスの設定
+	strcat(path, fileNumStr);
+	strcat(path, ".log");
 
 	// ファイルストリームを開く
 	ofs = new std::ofstream(path);
-}
-
-// ファイル記述
-int Logger::write(const char *str) {
-	*ofs << str;
-
-	return 1;
 }
 
 // ディレクトリが存在しているかチェックする
@@ -57,4 +62,65 @@ void Logger::checkExistDir(const char *dirName, size_t size) {
 		// なければ作る
 		CreateDirectory(_tdirName, NULL);
 	}
+}
+
+// ファイル名の最後のナンバーを取得する
+int Logger::lastFileNum(const char *path, size_t size) {
+	int number = 0;
+
+	WIN32_FIND_DATA fd;
+	TCHAR _tpath[32];
+
+#ifdef UNICODE
+	mbstowcs(_tpath, path, size);
+#else
+	_tcscpy(_tdirName, dirName);
+#endif
+
+	// ワイルドカード3桁の数値と拡張子を付ける
+	_tcscat(_tpath, _T("???.log"));
+
+	// ファイルが存在しているかチェック
+	HANDLE hFiles = FindFirstFile(_tpath, &fd);
+
+	if(hFiles != INVALID_HANDLE_VALUE) {
+		// 最後のファイルまで何もしない
+		while(FindNextFile(hFiles, &fd));
+		// ファイル名のナンバー部分以降のみを取り出す
+		_TCHAR subStr[32];
+		_tcsncpy(subStr, fd.cFileName+strlen(mFileName), 8);
+		_stscanf(subStr, _T("%d.log"), &number);
+		number++;
+	}
+
+	// ハンドルをクローズ
+	FindClose(hFiles);
+
+	return number;
+}
+
+// ファイル記述
+Logger& Logger::operator<<(const char c) {
+	*ofs << c;
+	return *this;
+}
+
+Logger& Logger::operator<<(const char *s) {
+	*ofs << s;
+	return *this;
+}
+
+Logger& Logger::operator<<(const int i) {
+	*ofs << i;
+	return *this;
+}
+
+Logger& Logger::operator<<(const float f) {
+	*ofs << f;
+	return *this;
+}
+
+Logger& Logger::operator<<(const double d) {
+	*ofs << d;
+	return *this;
 }
