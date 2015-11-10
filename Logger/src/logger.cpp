@@ -1,8 +1,14 @@
 #include "logger.h"
 
-Logger::Logger(const char *fileName) {
+Logger::Logger(const char *fileName, const char *extension) {
 	// ストリームを開く
-	open(fileName);
+	open(fileName, extension);
+}
+
+Logger::~Logger() {
+	if (ofs != NULL) {
+		ofs->close();
+	}
 }
 
 // ディレクトリが存在しているかチェックする
@@ -11,9 +17,10 @@ void Logger::checkExistDir(const char *dirName, size_t size) {
 	TCHAR _tdirName[32];
 
 #ifdef UNICODE
-	mbstowcs(_tdirName, dirName, size);
+	size_t ret;
+	mbstowcs_s(&ret, _tdirName, 32, dirName, size);
 #else
-	_tcscpy(_tdirName, dirName);
+	_tcscpy_s(_tdirName, dirName);
 #endif
 
 	// ディレクトリが存在しているかチェック
@@ -31,13 +38,14 @@ int Logger::lastFileNum(const char *path, size_t size) {
 	TCHAR _tpath[32];
 
 #ifdef UNICODE
-	mbstowcs(_tpath, path, size);
+	size_t ret;
+	mbstowcs_s(&ret, _tpath, 32, path, size);
 #else
-	_tcscpy(_tdirName, dirName);
+	_tcscpy_s(_tdirName, dirName);
 #endif
 
 	// ワイルドカード3桁の数値と拡張子を付ける
-	_tcscat(_tpath, _T("???.log"));
+	_tcscat_s(_tpath, _T("???.*"));
 
 	// ファイルが存在しているかチェック
 	HANDLE hFiles = FindFirstFile(_tpath, &fd);
@@ -47,8 +55,8 @@ int Logger::lastFileNum(const char *path, size_t size) {
 		while(FindNextFile(hFiles, &fd));
 		// ファイル名のナンバー部分以降のみを取り出す
 		_TCHAR subStr[32];
-		_tcsncpy(subStr, fd.cFileName+strlen(mFileName), 8);
-		_stscanf(subStr, _T("%d.log"), &number);
+		_tcsncpy_s(subStr, fd.cFileName+strlen(mFileName), 8);
+		_stscanf_s(subStr, _T("%d.%*s"), &number);
 		number++;
 	}
 
@@ -59,47 +67,59 @@ int Logger::lastFileNum(const char *path, size_t size) {
 }
 
 // ストリームを開く
-void Logger::open(const char *fileName) {
+void Logger::open(const char *fileName, const char *extension) {
 	// ファイル名が空の時
 	if(fileName == NULL) {
-		strcpy(mFileName, "default");
+		strcpy_s(mFileName, "default");
 	}
 	else {
-		strcpy(mFileName, fileName);
+		strcpy_s(mFileName, fileName);
 	}
+
+	if (extension == NULL) {
+		strcpy_s(mExtension, "log");
+	}
+	else {
+		strcpy_s(mExtension, extension);
+	}
+
 
 	// ディレクトリ名の設定１
 	char dirName[32];
-	strcpy(dirName, ".\\log\\");
+	strcpy_s(dirName, ".\\log\\");
 
 	// ディレクトリが存在しているかチェックする
 	checkExistDir(dirName, sizeof(dirName));
 
 	// 日付の取得
 	time_t t = time(NULL);
-	struct tm *local = localtime(&t);
+	struct tm local;
+	localtime_s(&local, &t);
 
 	// ディレクトリ名の設定２
 	char tmp[32];
-	sprintf(tmp, "%4d%02d%02d\\", local->tm_year+1900, local->tm_mon+1, local->tm_mday);
-	strcat(dirName, tmp);
+	sprintf_s(tmp, "%4d%02d%02d\\", local.tm_year+1900, local.tm_mon+1, local.tm_mday);
+	strcat_s(dirName, tmp);
 
 	// ディレクトリが存在しているかチェックする
 	checkExistDir(dirName, sizeof(dirName));
 
 	// パスの設定(拡張子とファイルナンバーを除く)
 	char path[128];
-	strcpy(path, dirName);
-	strcat(path, mFileName);
+	strcpy_s(path, dirName);
+	strcat_s(path, mFileName);
+
 
 	// ファイルの数をカウントする
 	int fileNum = lastFileNum(path, sizeof(path));
 	char fileNumStr[4];
-	sprintf(fileNumStr, "%03d", fileNum);
+	sprintf_s(fileNumStr, "%03d", fileNum);
+
 
 	// パスの設定
-	strcat(path, fileNumStr);
-	strcat(path, ".log");
+	strcat_s(path, fileNumStr);
+	strcat_s(path, ".");
+	strcat_s(path, mExtension);
 
 	// ファイルストリームを開く
 	ofs = new std::ofstream(path);
@@ -108,6 +128,29 @@ void Logger::open(const char *fileName) {
 // ストリームを閉じる
 void Logger::close() {
 	ofs->close();
+	ofs = NULL;
+}
+
+// ファイルに書込を行う
+void Logger::flush() {
+	ofs->flush();
+}
+
+// タイムスタンプの発行
+void Logger::timestamp(stamp_type type) {
+	time_t now = time(NULL);
+	struct tm pnow;
+	localtime_s(&pnow, &now);
+	
+	char buf[128];
+	// 時分秒での表示
+	if (type == JFB) {
+		sprintf_s(buf, "%02d時%02d分%02d秒", pnow.tm_hour, pnow.tm_min, pnow.tm_sec);
+	}
+	else if(type == COLON) {
+		sprintf_s(buf, "%02d:%02d:%02d", pnow.tm_hour, pnow.tm_min, pnow.tm_sec);
+	}
+	*ofs << buf;
 }
 
 // ファイル記述

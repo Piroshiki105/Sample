@@ -8,7 +8,7 @@
 #include <windows.h>
 #include <tchar.h>
 
-typedef enum eStamp { JFB, COLON } stamp_type;
+typedef enum eStamp { COLON, JFB } stamp_type;
 
 class Logger {
 private:
@@ -17,6 +17,9 @@ private:
 
 	// ファイル名
 	char mFileName[128];
+
+	// 拡張子
+	char mExtension[8];
 
 	// ディレクトリが存在しているかチェック、なければ作る
 	void checkExistDir(const char *dirName, size_t size);
@@ -27,16 +30,22 @@ private:
 public:
 	// コンストラクタ
 	// 引数　　　fileName：ファイル名(なしの場合はデフォルトネーム)
-	Logger(const char *fileName = NULL);
+	Logger(const char *fileName = NULL, const char *extension = NULL);
+
+	// デストラクタ
+	Logger::~Logger();
 
 	// ストリームを開く
-	void open(const char *fileName = NULL);
+	void open(const char *fileName = NULL, const char *extension = NULL);
 
 	// ストリームを閉じる
 	void close();
 
+	// ファイルに書込を行う
+	void flush();
+
 	// タイムスタンプ
-	void timestamp(stamp_type type);
+	void timestamp(stamp_type type = COLON);
 
 	// ファイルに記述
 	inline void write(const char   c) { *ofs << c; }
