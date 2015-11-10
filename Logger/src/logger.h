@@ -8,6 +8,8 @@
 #include <windows.h>
 #include <tchar.h>
 
+typedef enum eStamp { JFB, COLON } stamp_type;
+
 class Logger {
 private:
 	// ファイルストリーム
@@ -26,6 +28,15 @@ public:
 	// コンストラクタ
 	// 引数　　　fileName：ファイル名(なしの場合はデフォルトネーム)
 	Logger(const char *fileName = NULL);
+
+	// ストリームを開く
+	void open(const char *fileName = NULL);
+
+	// ストリームを閉じる
+	void close();
+
+	// タイムスタンプ
+	void timestamp(stamp_type type);
 
 	// ファイルに記述
 	inline void write(const char   c) { *ofs << c; }

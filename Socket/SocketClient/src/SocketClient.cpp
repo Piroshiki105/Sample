@@ -19,10 +19,13 @@ int main(void) {
 	connect(sock, (struct sockaddr*)&server, sizeof(server));
 
 	memset(buf, 0, sizeof(buf));
-	send(sock, "HELLO", 6, 0);
+	// send(sock, "HELLO", 6, 0);
 
-	recv(sock, buf, 32, 0);
-	std::cout << buf << std::endl;
+	//do {
+		recv(sock, buf, 5, 0);
+		//if (strcmp(buf, "") != 0)
+		std::cout << buf << std::endl;
+	//} while (strcmp(buf, "FIN"));
 
 	closesocket(sock);
 
